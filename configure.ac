@@ -9,7 +9,8 @@ AC_CONFIG_HEADERS([config.h])
 
 # Checks for programs.
 AC_PROG_CXX
-
+AC_PROG_CC
+AC_PROG_LIBTOOL
 # Checks for libraries.
 
 # Checks for header files.
@@ -18,5 +19,8 @@ AC_PROG_CXX
 
 # Checks for library functions.
 
-AC_CONFIG_FILES([Makefile src/Makefile])
+AC_CONFIG_FILES([Makefile
+                 src/Makefile
+				 lib/Makefile
+				 lib/http/Makefile])
 AC_OUTPUT
