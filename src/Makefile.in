@@ -66,7 +66,7 @@ am__installdirs = "$(DESTDIR)$(bindir)"
 PROGRAMS = $(bin_PROGRAMS)
 am_cstock_OBJECTS = cstock-main.$(OBJEXT)
 cstock_OBJECTS = $(am_cstock_OBJECTS)
-cstock_LDADD = $(LDADD)
+cstock_DEPENDENCIES = ../lib/http/lib_chttp.a
 cstock_LINK = $(LIBTOOL) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) \
 	--mode=link $(CXXLD) $(cstock_CXXFLAGS) $(CXXFLAGS) \
 	$(AM_LDFLAGS) $(LDFLAGS) -o $@
@@ -212,8 +212,9 @@ top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 AUTOMAKE_OPTIONS = foreign
-cstock_CXXFLAGS = -I../include 
+cstock_CXXFLAGS = -I../inc 
 cstock_SOURCES = main.cpp 
+cstock_LDADD = ../lib/http/lib_chttp.a
 all: all-am
 
 .SUFFIXES:

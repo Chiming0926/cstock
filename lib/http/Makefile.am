@@ -1,3 +1,3 @@
-lib_LTLIBRARIES			= lib_chttp.la
+noinst_LIBRARIES	= lib_chttp.a
 
-lib_chttp_la_SOURCES	= src/chttp.c
+lib_chttp_a_SOURCES	= src/chttp.cpp
