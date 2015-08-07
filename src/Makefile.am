@@ -2,7 +2,7 @@ AUTOMAKE_OPTIONS= foreign
 
 bin_PROGRAMS 	= cstock 
 
-cstock_CXXFLAGS = -I../inc 
+cstock_CXXFLAGS = -I../inc -Wall 
 
 cstock_SOURCES 	= main.cpp 
 
