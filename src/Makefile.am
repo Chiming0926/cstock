@@ -2,8 +2,10 @@ AUTOMAKE_OPTIONS= foreign
 
 bin_PROGRAMS 	= cstock 
 
-cstock_CXXFLAGS = -I../inc -Wall 
+cstock_CXXFLAGS = -I $(top_builddir)/inc -Wall \
+				  -I $(top_builddir)/src/cdata 
 
-cstock_SOURCES 	= main.cpp 
+cstock_SOURCES 	= main.cpp \
+				  cdata/cdata.cpp 
 
 cstock_LDADD	= ../lib/http/lib_chttp.a

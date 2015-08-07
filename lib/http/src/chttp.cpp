@@ -8,10 +8,22 @@
 #include "../inc/chttp.h"
 
 static bool send_data(int sock, char *data);
-static bool send_client_data(chttp *c);
+static bool send_client_data(chttp *c, int content_len);
 
 
 static bool send_data(int sock, char *data)
+{
+    if (sock > 0 && data)
+    {
+		if (write(sock, data, strlen(data)) < 0)
+			goto err;
+		return true;
+    }
+err:
+	return false;
+}
+
+static bool send_data(int sock, const char *data)
 {
     if (sock > 0 && data)
     {
@@ -61,10 +73,6 @@ static bool send_client_data(chttp *c, int content_len)
 		if (send_data(c->sock_fd, "Accept-Encoding: gzip, deflate\r\n") == false) goto err;
 
 		if (send_data(c->sock_fd, "Accept-Language: zh-TW,zh;q=0.8,en-US;q=0.6,en;q=0.4,zh-CN;q=0.2\r\n\r\n") == false) goto err;
-
-		//if (send_data(c->sock_fd, "download=csv&qdate=104%2F08%2F06&sorting=by_issue") == false) goto err;
-
-		
 
 		return true;
 	}
@@ -193,7 +201,7 @@ out:
 	return true;
 	
 err:
-	c->ops->c_close(c);
+	c->ops->close(c);
 	return false;
 }
 
@@ -205,7 +213,6 @@ static bool chttp_post(chttp *c, char *request, char *post_data, char *page_buf,
 	if (c->sock_fd <= 0)
 		return false;
 
-	char buf[128];
 	fd_set recvfd;
 	struct timeval tv;
 	int bytes_read = 0;
@@ -260,15 +267,16 @@ out:
 	return true;
 	
 err:
-	c->ops->c_close(c);
+	c->ops->close(c);
 	return false;
 }
 
 static chttp_ops ops = 
 {
-	.c_connect 	= chttp_connect,
-	.c_close	= chttp_close,
-	.c_post		= chttp_post,
+	.connect 	= chttp_connect,
+	.close		= chttp_close,
+	.post		= chttp_post,
+	.get		= chttp_get,
 };
 void init_chttp(void)
 {

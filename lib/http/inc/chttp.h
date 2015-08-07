@@ -4,6 +4,7 @@
 #define HOST_NAME_LEN	128
 #define HTTP_PORT		80
 #define PAGE_SIZE 		1024*1024*4
+#define STRING_LEN		256
 
 typedef struct _chttp_
 {
@@ -14,10 +15,10 @@ typedef struct _chttp_
 
 struct chttp_ops
 {
-	bool (*c_connect)(chttp *c, char *host_name);
-	void (*c_close)(chttp *c);
-	bool (*c_post)(chttp *c, char *request, char *post_data, char *page_buf, int buf_size, int *read_size);
-	bool (*c_get)(chttp *c, char *request, char *page_buf, int buf_size, int *read_size);
+	bool (*connect)(chttp *c, char *host_name);
+	void (*close)(chttp *c);
+	bool (*post)(chttp *c, char *request, char *post_data, char *page_buf, int buf_size, int *read_size);
+	bool (*get)(chttp *c, char *request, char *page_buf, int buf_size, int *read_size);
 };
 
 extern void init_chttp(void);
