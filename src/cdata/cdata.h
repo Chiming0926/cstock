@@ -3,6 +3,9 @@
 
 #include <common.h>
 
+#define MIN_DATA_SIZE 600
+#define UPDATE_TIME_FILE "data/update.time"
+
 typedef struct _cdata_
 {
 	chttp*	http;
@@ -11,7 +14,7 @@ typedef struct _cdata_
 
 struct cdata_ops
 {
-	bool (*get_foreign_investor_sorting_data)(cdata *d, int year , int month, int day);
+	void (*update_data)(cdata *d);
 	void (*close)(cdata *d);
 };
 

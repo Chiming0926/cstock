@@ -3,6 +3,7 @@
 #include <common.h>
 #include <cdata.h>
 
+
 int main(int argc, char *argv[])
 {
 	printf("@@@@@@@@@@ hello cstock @@@@@@@@@@ \n");
@@ -10,8 +11,11 @@ int main(int argc, char *argv[])
 	data = cdata_new();
 	if (data)
 	{
-		data->ops->get_foreign_investor_sorting_data(data, 104, 8, 6);
+		//data->ops->get_foreign_investor_sorting_data(data, 104, 8, 8);
+		data->ops->update_data(data);
+		data->ops->close(data);
 	}
+	
 /*
 	chttp* 	c;
 	char* 	data_buf;
