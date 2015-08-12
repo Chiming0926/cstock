@@ -22,5 +22,6 @@ AC_PROG_LIBTOOL
 AC_CONFIG_FILES([Makefile
                  src/Makefile
 				 lib/Makefile
-				 lib/http/Makefile])
+				 lib/http/Makefile
+				 lib/img/Makefile])
 AC_OUTPUT

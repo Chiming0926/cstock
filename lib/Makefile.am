@@ -1,1 +1,1 @@
-SUBDIRS = http
+SUBDIRS = http img
