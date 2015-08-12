@@ -9,5 +9,5 @@ cstock_SOURCES 	= main.cpp \
 				  cdata/cdata.cpp \
 				  cdata/bshtm.cpp
 
-cstock_LDADD	= ../lib/http/lib_chttp.a \
-				  $(top_builddir)/lib/img/lib_img.a
+cstock_LDADD	= $(top_builddir)/lib/http/lib_chttp.a \
+				  $(top_builddir)/lib/img/lib_cimg.a

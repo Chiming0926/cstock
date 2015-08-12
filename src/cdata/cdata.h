@@ -16,6 +16,7 @@ typedef struct _cdata_
 
 struct cdata_ops
 {
+	bool init;
 	void (*update_data)(cdata *d);
 	void (*close)(cdata *d);
 	bool (*get_bshtm_data)(cdata *d, int stock_number, int year , int month, int day);

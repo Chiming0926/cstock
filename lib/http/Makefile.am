@@ -1,5 +1,5 @@
-noinst_LIBRARIES	= lib_http.a
+noinst_LIBRARIES	= lib_chttp.a
 
-lib_http_a_CXXFLAGS= -Wall
+lib_chttp_a_CXXFLAGS= -Wall
 
-lib_http_a_SOURCES	= src/http.cpp
+lib_chttp_a_SOURCES	= src/chttp.cpp

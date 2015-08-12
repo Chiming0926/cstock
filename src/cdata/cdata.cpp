@@ -287,12 +287,7 @@ static void cdata_close(cdata *d)
 	}
 }
 
-static cdata_ops ops = 
-{
-	.update_data = update_data,
-	.close = cdata_close,
-	.get_bshtm_data = cdata_get_bshtm_data,
-};
+static cdata_ops ops;
 
 cdata *cdata_new(void)
 {
@@ -300,7 +295,13 @@ cdata *cdata_new(void)
 	d = (cdata*)malloc(sizeof(cdata));
 	if (d == NULL)
 		goto err;
-	
+	if (ops.init == false)
+	{
+		ops.update_data 	= update_data,
+		ops.close 			= cdata_close,
+		ops.get_bshtm_data = cdata_get_bshtm_data,
+		ops.init = true;
+	}
 	d->ops = &ops;
 	set_bshtm_ops(d);
 	return d;

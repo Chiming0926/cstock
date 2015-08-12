@@ -271,13 +271,8 @@ err:
 	return false;
 }
 
-static chttp_ops ops = 
-{
-	.connect 	= chttp_connect,
-	.close		= chttp_close,
-	.post		= chttp_post,
-	.get		= chttp_get,
-};
+static chttp_ops ops;
+
 void init_chttp(void)
 {
 	printf("@@@@@@ chttp init @@@@@@ \n");
@@ -290,7 +285,14 @@ chttp *chttp_new(void)
 	c = (chttp*)malloc(sizeof(chttp));
 	if (c == NULL)
 		goto err;
-	
+	if (ops.init == false)
+	{
+		ops.connect = chttp_connect;
+		ops.close	= chttp_close;
+		ops.post	= chttp_post;
+		ops.get		= chttp_get;
+		ops.init 	= true;
+	}
 	c->ops = &ops;
 	return c;
 err:

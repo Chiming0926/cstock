@@ -15,6 +15,7 @@ typedef struct _chttp_
 
 struct chttp_ops
 {
+	bool init;
 	bool (*connect)(chttp *c, char *host_name);
 	void (*close)(chttp *c);
 	bool (*post)(chttp *c, char *request, char *post_data, char *page_buf, int buf_size, int *read_size);

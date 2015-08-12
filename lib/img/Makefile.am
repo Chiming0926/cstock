@@ -1,5 +1,5 @@
-noinst_LIBRARIES	= lib_img.a
+noinst_LIBRARIES	= lib_cimg.a
 
-lib_img_a_CXXFLAGS= -Wall
+lib_cimg_a_CXXFLAGS= -Wall
 
-lib_img_a_SOURCES	= src/cimg.cpp
+lib_cimg_a_SOURCES	= src/cimg.cpp
