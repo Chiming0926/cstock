@@ -12,7 +12,8 @@ int main(int argc, char *argv[])
 	if (data)
 	{
 		//data->ops->get_foreign_investor_sorting_data(data, 104, 8, 8);
-		data->ops->update_data(data);
+		//data->ops->update_data(data);
+		data->ops->get_bshtm_data(data, 2317, 104, 8, 5);
 		data->ops->close(data);
 	}
 	

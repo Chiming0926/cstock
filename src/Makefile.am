@@ -6,6 +6,7 @@ cstock_CXXFLAGS = -I $(top_builddir)/inc -Wall \
 				  -I $(top_builddir)/src/cdata 
 
 cstock_SOURCES 	= main.cpp \
-				  cdata/cdata.cpp 
+				  cdata/cdata.cpp \
+				  cdata/bshtm.cpp
 
 cstock_LDADD	= ../lib/http/lib_chttp.a

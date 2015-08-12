@@ -2,14 +2,15 @@
 #include <stdlib.h>
 #include <string.h>
 #include "cdata.h"
+#include "bshtm.h"
 #include <time.h>
 #include <unistd.h>
 #include <sys/stat.h>
 
-static void save_file(char *name, char *buf, int size);
+//static void save_file(char *name, char *buf, int size);
 static bool cdata_get_investor_sorting_data(cdata *d, int year , int month, int day, int type);
 
-static void save_file(char *name, char *buf, int size)
+void save_file(char *name, char *buf, int size)
 {
 	printf("name = %s \n", name);
 	FILE *fp = fopen(name, "wb+");
@@ -146,35 +147,8 @@ static bool cdata_get_bshtm_data(cdata *d, int stock_number, int year , int mont
 {
 	if (d)
 	{
-		printf("year = %d, month = %d, day = %d\n", year, month, day);
-		chttp* 	c;
-		char* 	data_buf;
-		int		read_size, data_position; 
-		char	str[STRING_LEN], str1[STRING_LEN];
-		data_buf = (char*)malloc(PAGE_SIZE);
-		if (data_buf)
-		{
-			c = chttp_new();
-			if (c == NULL)
-				goto err;
-			strcpy(str, "bsr.twse.com.tw");
-			c->ops->connect(c, str);
-			strcpy(str, "bshtm");
-			
-			sprintf(str1, "download=csv&qdate=%d%%2F%02d%%2F%02d&sorting=by_issue", year, month, day);
-			c->ops->post(c, str, str1, data_buf, PAGE_SIZE, &read_size);
-			c->ops->close(c);
-			if (read_size < MIN_DATA_SIZE)
-			{
-				free(data_buf);
-				goto err;
-			}
-			sprintf(str, "%d%02d%02d.csv", year, month, day);
-			data_position = find_data_start_position(data_buf, read_size);
-			save_file(str, data_buf + data_position, read_size - data_position);
-			free(data_buf);
-			return true;
-		}
+		d->bs_ops->update_data(d);
+		return true;
 	}
 err:	
 	return false;
@@ -316,7 +290,8 @@ static void cdata_close(cdata *d)
 static cdata_ops ops = 
 {
 	.update_data = update_data,
-	.close = cdata_close
+	.close = cdata_close,
+	.get_bshtm_data = cdata_get_bshtm_data,
 };
 
 cdata *cdata_new(void)
@@ -327,6 +302,7 @@ cdata *cdata_new(void)
 		goto err;
 	
 	d->ops = &ops;
+	set_bshtm_ops(d);
 	return d;
 err:
 	if (d)
