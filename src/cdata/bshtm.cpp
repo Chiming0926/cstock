@@ -47,6 +47,7 @@ static bool bshtm_update_data(cdata *d)
 		data_buf = (char*)malloc(PAGE_SIZE);
 		if (data_buf)
 		{
+#if 1
 			c = chttp_new();
 			if (c == NULL)
 				goto err;
@@ -67,11 +68,21 @@ static bool bshtm_update_data(cdata *d)
 			c->ops->get(c, str, data_buf, PAGE_SIZE, &read_size);
 			c->ops->close(c);
 			
-			sprintf(str, "captcha.jpg");
+			sprintf(str, CAPTCHA_IMAGE);
 			data_position = get_captcha_start_position(data_buf, read_size);
 			save_file(str, data_buf + data_position, read_size - data_position);
+#endif
 			free(data_buf);
-			return true;
+			/* image recognition */
+			cimg*	img;
+			char	captcha[6];
+			img = cimg_new();
+			if (img->ops->get_captcha(CAPTCHA_IMAGE, captcha))
+			{
+				captcha[5] = '\0';
+				printf("@@@@@@@@@@ captcha = %s \n", captcha);
+				return true;
+			}
 		}
 	}
 err:	

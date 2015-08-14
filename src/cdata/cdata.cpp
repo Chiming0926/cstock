@@ -147,7 +147,11 @@ static bool cdata_get_bshtm_data(cdata *d, int stock_number, int year , int mont
 {
 	if (d)
 	{
-		d->bs_ops->update_data(d);
+		int i;
+		//for (i=0; i<100; i++)
+		{
+			printf("@@@@@@@@@@@@@@@@@@@ i = %d ret = %d\n", i, d->bs_ops->update_data(d));
+		}
 		return true;
 	}
 err:	
@@ -299,7 +303,7 @@ cdata *cdata_new(void)
 	{
 		ops.update_data 	= update_data,
 		ops.close 			= cdata_close,
-		ops.get_bshtm_data = cdata_get_bshtm_data,
+		ops.get_bshtm_data	= cdata_get_bshtm_data,
 		ops.init = true;
 	}
 	d->ops = &ops;
