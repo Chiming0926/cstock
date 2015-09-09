@@ -17,15 +17,19 @@ typedef struct _cdata_
 struct cdata_ops
 {
 	bool init;
+	void (*save_to_excel)(cdata *d, char *data, int size, char *file_path);
 	void (*update_data)(cdata *d);
 	void (*close)(cdata *d);
 	bool (*get_bshtm_data)(cdata *d, int stock_number, int year , int month, int day);
+	int  (*http_post)(cdata *d, char *host_name, char *request, char *post_data, 
+						char *data_buf, int *read_size, char *session_id);
+	int  (*http_get)(cdata *d, char *host_name, char *request, char *data_buf, int *read_size , int type);
 };
 
 struct bshtm_ops
 {
 	bool init;
-	bool (*update_data)(cdata *d);
+	bool (*update_data)(cdata *d, char *st_num);
 };
 
 extern cdata *cdata_new(void);

@@ -2,10 +2,9 @@
 #define _C_IMG_H_
 
 #define CAPTCHA_IMAGE 		"CaptchaImage.jpg"
-#define CAPTCHA_WIDTH 		50
-#define CAPTCHA_HEIGHT		50
-#define RECOGNITION_DATA_NUM	36
-
+#define CAPTCHA_WIDTH 		30
+#define CAPTCHA_HEIGHT		30
+#define RECOGNITION_DATA_NUM	(36 * 2)
 
 typedef struct _cimg_
 {

@@ -144,18 +144,21 @@ static char get_recognition_result(Mat img)
 	
 	for (i=0 ;i<RECOGNITION_DATA_NUM; i++)
 	{
-		tmp = get_mse(img, recognition_data[i]);
-		if (mse > tmp)
+		if (recognition_data[i].data)
 		{
-			mse = tmp;
-			result = recognition_data_string[i];
+			tmp = get_mse(img, recognition_data[i]);
+			if (mse > tmp)
+			{
+				mse = tmp;
+				result = recognition_data_string[i%36];
+			}
 		}
 	}
 	return result;
 }
 
 static bool cimg_get_captcha(char *file_path, char *captcha)
-{		
+{	
 	if (file_path != NULL && captcha != NULL)
 	{
 		printf("CV Version %s \n", CV_VERSION);
@@ -195,6 +198,8 @@ static bool cimg_get_captcha(char *file_path, char *captcha)
 		{
 			if (rect[i].width > 20 && rect[i].height > 20)
 			{
+				if (rect[i].width > 40)
+					return false;
 				parse_rect[j++] = rect[i];
 			}
 		}
@@ -221,12 +226,14 @@ static bool cimg_get_captcha(char *file_path, char *captcha)
 		
 		Mat tmp, result;
 		i = 0;
+		char name[32];
 		for (i=0; i<5; i++)
 		{
 			tmp = dilation(parse_rect[i]);
 			resize(tmp, result, Size(CAPTCHA_WIDTH, CAPTCHA_HEIGHT));
+			sprintf(name, "%d.png", i);
+			imwrite(name, result);
 			captcha[i] = get_recognition_result(result);
-			printf(" captcha[i] = %c", captcha[i]);
 		}
 		return true;
 	}

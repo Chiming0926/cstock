@@ -3,9 +3,58 @@
 #include <string.h>
 #include "bshtm.h"
 
-static void get_captcha_url(char *data, int read_size, char *url)
+#define CTRACE printf("@@@@@@@@@@@@@@@ %s %s %d \n", __FUNCTION__, __FILE__, __LINE__);
+
+typedef struct _bshtm_post_data_
 {
-	if (data == NULL || url == NULL)
+	char __VIEWSTATE[STRING_LEN*2];
+	char __EVENTVALIDATION[STRING_LEN];
+	char url[STRING_LEN];
+	char session_id[STRING_LEN];
+} bshtm_post_data;
+
+static void parse_http_symbol(char *in, char *out)
+{
+	CTRACE;
+	if (in == NULL || out == NULL)
+		return;
+	CTRACE;
+	int i;
+	int len = strlen(in);
+	int count = 0;
+
+	for (i=0; i<len; i++)
+	{
+		if (in[i] == 0x2F)
+		{
+			out[count++] 	= 0x25;
+			out[count++] 	= 0x32;
+			out[count++] 	= 0x46;
+			continue;
+		}
+		else if (in[i] == 0x3D)
+		{
+			out[count++] 	= 0x25;
+			out[count++] 	= 0x33;
+			out[count++] 	= 0x44;
+		}
+		else if (in[i] == 0x2B)
+		{
+			out[count++] 	= 0x25;
+			out[count++] 	= 0x32;
+			out[count++] 	= 0x42;
+		}
+		else
+		{
+			out[count++] = in[i];
+		}
+	}
+	out[count] = '\0';
+}
+	
+static void receive_useful_data(char *data, int read_size, bshtm_post_data *bsdata)
+{
+	if (data == NULL || bsdata == NULL)
 		return;
 	int i;
 	int counter = read_size - strlen(CAPTCHA_URL_PREFIX);
@@ -13,13 +62,30 @@ static void get_captcha_url(char *data, int read_size, char *url)
 		return;
 	for (i=0; i<read_size; i++)
 	{
+		if (strncmp(data+i, __VIEWSTATE_PREFIX, strlen(__VIEWSTATE_PREFIX)) == 0)
+		{
+			char buf[STRING_LEN*2];
+			memcpy(buf, data+i+24, __VIEWSTATE_DATA_LEN);
+			buf[__VIEWSTATE_DATA_LEN] = '\0';
+			parse_http_symbol(buf, bsdata->__VIEWSTATE);
+		}
+		if (strncmp(data+i, __EVENTVALIDATION_PREFIX, strlen(__EVENTVALIDATION_PREFIX)) == 0)
+		{
+			char buf[STRING_LEN];
+			memcpy(buf, data+i+30, __EVENTVALIDATION_LEN);
+			buf[__EVENTVALIDATION_LEN] = '\0';
+			parse_http_symbol(buf, bsdata->__EVENTVALIDATION);
+		}
 		if (strncmp(data+i, CAPTCHA_URL_PREFIX, strlen(CAPTCHA_URL_PREFIX)) == 0)
 		{
-			memcpy(url, data+i, strlen(CAPTCHA_URL_PREFIX)+36);
-			url[strlen(CAPTCHA_URL_PREFIX)+36] = '\0';
-			printf("url = %s \n", url);
-			break;
+			memcpy(bsdata->url, data+i, strlen(CAPTCHA_URL_PREFIX)+36);
+			bsdata->url[strlen(CAPTCHA_URL_PREFIX)+36] = '\0';
 		}	
+		if (strncmp(data+i, SEESION_ID_PRIFIX, strlen(SEESION_ID_PRIFIX)) == 0)
+		{
+			memcpy(bsdata->session_id, data+i+30, SEESION_ID_LEN);
+			bsdata->session_id[SEESION_ID_LEN] = '\0';
+		}
 	}
 }
 
@@ -36,56 +102,58 @@ static int get_captcha_start_position(char *data, int size)
 	
 }
 
-static bool bshtm_update_data(cdata *d)
+static bool bshtm_update_data(cdata *d, char *st_num)
 {
 	if (d)
 	{
-		chttp* 	c;
 		char* 	data_buf;
 		int		read_size, data_position; 
-		char	str[STRING_LEN], url[STRING_LEN];
+		char	host[STRING_LEN], bsMenu[STRING_LEN], str[STRING_LEN];
+		bshtm_post_data	bsdata;
 		data_buf = (char*)malloc(PAGE_SIZE);
+		strcpy(host, "bsr.twse.com.tw");
+		strcpy(bsMenu, "/bshtm/bsMenu.aspx");
 		if (data_buf)
 		{
-#if 1
-			c = chttp_new();
-			if (c == NULL)
-				goto err;
-			strcpy(str, "bsr.twse.com.tw");
-			c->ops->connect(c, str);
-			strcpy(str, "/bshtm/bsMenu.aspx");
-			c->ops->get(c, str, data_buf, PAGE_SIZE, &read_size);
-			get_captcha_url(data_buf, read_size, url);
-			//c->ops->get(c, str, data_buf, PAGE_SIZE, &read_size);	
-			c->ops->close(c);
+			/* connect to bsMenu and get some useful data */
+			d->ops->http_get(d, host, bsMenu, data_buf, &read_size, 2);
+			receive_useful_data(data_buf, read_size, &bsdata);
 
-			c = chttp_new();
-			if (c == NULL)
-				goto err;
-			strcpy(str, "bsr.twse.com.tw");
-			c->ops->connect(c, str);
-			sprintf(str, "/bshtm/%s", url);
-			c->ops->get(c, str, data_buf, PAGE_SIZE, &read_size);
-			c->ops->close(c);
-			
+			/* get captcha */
+			sprintf(str, "/bshtm/%s", bsdata.url);
+			d->ops->http_get(d, host, str, data_buf, &read_size, 1);
 			sprintf(str, CAPTCHA_IMAGE);
 			data_position = get_captcha_start_position(data_buf, read_size);
 			save_file(str, data_buf + data_position, read_size - data_position);
-#endif
-			free(data_buf);
+			
 			/* image recognition */
 			cimg*	img;
 			char	captcha[6];
 			img = cimg_new();
-			if (img->ops->get_captcha(CAPTCHA_IMAGE, captcha))
+			sprintf(str, CAPTCHA_IMAGE);
+			if (img->ops->get_captcha(str, captcha))
 			{
+				/* crack the captcha */
 				captcha[5] = '\0';
-				printf("@@@@@@@@@@ captcha = %s \n", captcha);
-				return true;
+				char post_data[STRING_LEN*8];
+
+				sprintf(post_data, "__EVENTTARGET=&__EVENTARGUMENT=&__LASTFOCUS=&__VIEWSTATE=%s&__EVENTVALIDATION=%s&RadioButton_Normal=RadioButton_Normal&TextBox_Stkno=%s&CaptchaControl1=%s&btnOK=%%E6%%9F%%A5%%E8%%A9%%A2", 
+					    bsdata.__VIEWSTATE, bsdata.__EVENTVALIDATION, st_num, captcha);
+				d->ops->http_post(d, host, bsMenu, post_data, data_buf, &read_size, bsdata.session_id);
+
+				/* get bshtm data */
+				strcpy(str, "/bshtm/bsContent.aspx");
+				d->ops->http_get(d, host, str, data_buf, &read_size, 2);
+				sprintf(str, "%s.csv", st_num);
+				d->ops->save_to_excel(d, data_buf, read_size, str);
+				free(data_buf);	
+				if (read_size < 200)
+					return false;
+				else
+					return true;
 			}
 		}
 	}
-err:	
 	return false;
 }
 

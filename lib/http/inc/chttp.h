@@ -10,6 +10,8 @@ typedef struct _chttp_
 {
 	int 	sock_fd;
 	char	host_name[HOST_NAME_LEN];
+	char	session_id[STRING_LEN];
+	char	send_data[STRING_LEN*16];
 	struct chttp_ops *ops;
 } chttp;
 
@@ -20,9 +22,9 @@ struct chttp_ops
 	void (*close)(chttp *c);
 	bool (*post)(chttp *c, char *request, char *post_data, char *page_buf, int buf_size, int *read_size);
 	bool (*get)(chttp *c, char *request, char *page_buf, int buf_size, int *read_size);
+	bool (*get2)(chttp *c, char *request, char *page_buf, int buf_size, int *read_size);
 };
 
-extern void init_chttp(void);
 extern chttp *chttp_new(void);
 
 #endif

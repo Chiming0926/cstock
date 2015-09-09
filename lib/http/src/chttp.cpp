@@ -8,7 +8,7 @@
 #include "../inc/chttp.h"
 
 static bool send_data(int sock, char *data);
-static bool send_client_data(chttp *c, int content_len);
+static bool parse_client_data(chttp *c, int content_len);
 
 
 static bool send_data(int sock, char *data)
@@ -36,48 +36,71 @@ err:
 }
 
 /*
-	Send our basic data to server. Ex: HTTP version, Connection status, Content-Type.. etc
+ *	Send our basic data to server. Ex: HTTP version, Connection status, Content-Type.. etc
  */
-static bool send_client_data(chttp *c, int content_len)
+static bool parse_client_data(chttp *c, int content_len)
 {
 	if (c && c->sock_fd > 0)
 	{
-		char buf[HOST_NAME_LEN];
-		if (send_data(c->sock_fd, " HTTP/1.1\r\n") == false) goto err;
-
+		char buf[HOST_NAME_LEN];	
+		sprintf(buf, " HTTP/1.1\r\n");
+		strcat(c->send_data, buf);
+		
 		sprintf(buf, "Host: %s\r\n", c->host_name);
-		if (send_data(c->sock_fd, buf) == false) goto err;
+		strcat(c->send_data, buf);
+		
+		sprintf(buf, "User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:40.0) Gecko/20100101 Firefox/40.0\r\n");
+		strcat(c->send_data, buf);
+		
+		sprintf(buf, "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8\r\n");
+		strcat(c->send_data, buf);
+		
+		sprintf(buf, "Accept-Language: zh-TW,zh;q=0.8,en-US;q=0.5,en;q=0.3\r\n");
+		strcat(c->send_data, buf);
+		
+		sprintf(buf, "Accept-Encoding: gzip, deflate\r\n");
+		strcat(c->send_data, buf);
+		
+		sprintf(buf, "Referer: http://bsr.twse.com.tw/bshtm/bsMenu.aspx\r\n");
+		strcat(c->send_data, buf);
+		
+		if (c->session_id[0] != 0)
+		{
+			sprintf(buf, "Cookie: ASP.NET_SessionId=%s\r\n", c->session_id);
+			strcat(c->send_data, buf);
+		}
 
-		if (send_data(c->sock_fd, "Connection n: Keep-alive\r\n") == false) goto err;
+		sprintf(buf, "Connection: keep-alive\r\n");
+		strcat(c->send_data, buf);
 
+		sprintf(buf, "Content-Type: application/x-www-form-urlencoded\r\n");
+		strcat(c->send_data, buf);
 		if (content_len > 0)
 		{
-			sprintf(buf, "Content-Length: %d\r\n", content_len);	
-			if (send_data(c->sock_fd, buf) == false) goto err;
+			sprintf(buf, "Content-Length: %d\r\n", content_len);
+			strcat(c->send_data, buf);
 		}
-		
-		if (send_data(c->sock_fd, "Cache-Control: max-age=0\r\n") == false) goto err;
-
-		if (send_data(c->sock_fd, "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8\r\n") == false) goto err;
-
-		if (send_data(c->sock_fd, "Origin: http://www.twse.com.tw\r\n") == false) goto err;
-
-		if (send_data(c->sock_fd, "Upgrade-Insecure-Requests: 1\r\n") == false) goto err;
-
-		if (send_data(c->sock_fd, "User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/44.0.2403.130 Safari/537.36\r\n") == false) goto err;
-
-		if (send_data(c->sock_fd, "Content-Type: application/x-www-form-urlencoded\r\n") == false) goto err;
-
-		if (send_data(c->sock_fd, "Referer: http://www.twse.com.tw/ch/trading/fund/TWT38U/TWT38U.php\r\n") == false) goto err;
-
-		if (send_data(c->sock_fd, "Accept-Encoding: gzip, deflate\r\n") == false) goto err;
-
-		if (send_data(c->sock_fd, "Accept-Language: zh-TW,zh;q=0.8,en-US;q=0.6,en;q=0.4,zh-CN;q=0.2\r\n\r\n") == false) goto err;
-
+		strcat(c->send_data, "\r\n");
 		return true;
 	}
-err:
 	return false;
+}
+
+static void printf_host_ip_address(char *host_name)
+{
+	struct hostent *host;
+	struct in_addr **addr_list;
+  	if((host = gethostbyname(host_name)) == NULL)
+  	{
+    	printf("Can't get IP");
+    	return;
+  	}	
+	int i;
+	addr_list = (struct in_addr **)host->h_addr_list;
+    for (i = 0; addr_list[i] != NULL; i++) 
+	{
+        printf("%s ", inet_ntoa(*addr_list[i]));
+    }
 }
 
 static bool chttp_connect(chttp *c, char *host_name)
@@ -87,7 +110,6 @@ static bool chttp_connect(chttp *c, char *host_name)
 
 	int sock = 0;
     struct sockaddr_in server;
-
 	/* Create socket */
     sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
     if (sock == -1)
@@ -103,6 +125,7 @@ static bool chttp_connect(chttp *c, char *host_name)
     	printf("Can't get IP");
     	goto exception_chttp_connect;
   	}	
+	printf_host_ip_address(host_name);
   	server.sin_addr  		= *((struct in_addr *)host->h_addr_list[0]);
     server.sin_family 		= AF_INET;
     server.sin_port 		= htons(HTTP_PORT); //http
@@ -205,7 +228,7 @@ err:
 	return false;
 }
 
-static bool chttp_post(chttp *c, char *request, char *post_data, char *page_buf, int buf_size, int *read_size)
+static bool chttp_get2(chttp *c, char *request, char *page_buf, int buf_size, int *read_size)
 {
 	if (c == NULL || page_buf == NULL)
 		return false;
@@ -217,17 +240,14 @@ static bool chttp_post(chttp *c, char *request, char *post_data, char *page_buf,
 	struct timeval tv;
 	int bytes_read = 0;
 	int ret;
-	
-	if (send_data(c->sock_fd, "POST ") == false) goto err;
-	if (send_data(c->sock_fd, request) == false) goto err;
 
-	send_client_data(c, strlen(post_data));
 
-	if (send_data(c->sock_fd, post_data) == false) goto err;
+	sprintf(c->send_data, "GET %s", request);
+	parse_client_data(c, 0);
+	if (send_data(c->sock_fd, c->send_data) == false) goto err;
     FD_ZERO(&recvfd);
     FD_SET(c->sock_fd, &recvfd);
-    
-    tv.tv_sec  = 120;
+    tv.tv_sec  = 20;
     tv.tv_usec = 500000;
     int rv;
     for (;;)
@@ -253,9 +273,87 @@ static bool chttp_post(chttp *c, char *request, char *post_data, char *page_buf,
 				for (;;)
 				{
                 	ret = read(c->sock_fd, page_buf + bytes_read, buf_size);
+					
 					if (ret <= 0)
                 		goto out;
+					
 					bytes_read += ret;	
+					if (page_buf[bytes_read - 1] == 0x0a && page_buf[bytes_read - 2] == 0x0d
+						&& page_buf[bytes_read - 3] == 0x0a && page_buf[bytes_read - 4] == 0x0d)
+						goto out;
+					if (bytes_read > buf_size)
+						goto out;
+				}
+            }
+        }
+    }
+out:
+    *read_size = bytes_read;
+	return true;
+	
+err:
+	c->ops->close(c);
+	return false;
+}
+
+static bool chttp_post(chttp *c, char *request, char *post_data, char *page_buf, int buf_size, int *read_size)
+{
+	if (c == NULL || page_buf == NULL)
+		return false;
+	/* check connection status */
+	if (c->sock_fd <= 0)
+		return false;
+
+	fd_set recvfd;
+	struct timeval tv;
+	int bytes_read = 0;
+	int ret;
+	
+
+	sprintf(c->send_data, "POST %s", request);
+	
+	parse_client_data(c, strlen(post_data));
+	int len;
+	len = strlen(post_data);
+	if (send_data(c->sock_fd, c->send_data) == false) goto err;
+
+	ret = write(c->sock_fd, post_data, (size_t)len);
+    FD_ZERO(&recvfd);
+    FD_SET(c->sock_fd, &recvfd);
+    
+    tv.tv_sec  = 120;
+    tv.tv_usec = 500000;
+    int rv;
+    for (;;)
+    {
+        
+        FD_ZERO(&recvfd);
+        FD_SET(c->sock_fd, &recvfd);
+        rv = select(c->sock_fd+1, &recvfd, NULL, NULL, &tv);
+        if ( rv == -1 ) 
+        {
+            printf("error occurred \n");
+            break;
+        }
+        else if ( rv == 0 )
+        {
+            printf("timeout \n");
+            break;
+        }
+        else
+        {
+	          if( FD_ISSET(c->sock_fd, &recvfd) )
+            {
+				for (;;)
+				{
+                	ret = read(c->sock_fd, page_buf + bytes_read, buf_size);
+					if (ret <= 0)
+                		goto out;
+  
+					bytes_read += ret;	
+					if (page_buf[bytes_read - 1] == 0x0a && page_buf[bytes_read - 2] == 0x0d
+						&& page_buf[bytes_read - 3] == 0x0a && page_buf[bytes_read - 4] == 0x0d)
+						goto out;
 					if (bytes_read > buf_size)
 						goto out;
 				}
@@ -273,12 +371,6 @@ err:
 
 static chttp_ops ops;
 
-void init_chttp(void)
-{
-	printf("@@@@@@ chttp init @@@@@@ \n");
-//	chttp_ops ops;
-}
-
 chttp *chttp_new(void)
 {
 	chttp *c = NULL;
@@ -291,6 +383,7 @@ chttp *chttp_new(void)
 		ops.close	= chttp_close;
 		ops.post	= chttp_post;
 		ops.get		= chttp_get;
+		ops.get2	= chttp_get2;
 		ops.init 	= true;
 	}
 	c->ops = &ops;

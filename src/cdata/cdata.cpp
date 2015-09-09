@@ -13,7 +13,7 @@ static bool cdata_get_investor_sorting_data(cdata *d, int year , int month, int 
 void save_file(char *name, char *buf, int size)
 {
 	printf("name = %s \n", name);
-	FILE *fp = fopen(name, "wb+");
+	FILE *fp = fopen(name, "wb");
 	if (fp)
 	{
 	    fwrite(buf, 1, size, fp);
@@ -75,6 +75,15 @@ static bool is_data_exist(char *file_path)
 		return true;
 	}
 
+}
+
+static void cdata_save_to_excel(cdata *d, char *data, int size, char *file_path)
+{
+	if (d == NULL || data == NULL)
+		return;
+	int data_position;
+	data_position = find_data_start_position(data, size);
+	save_file(file_path, data + data_position, size - data_position);
 }
 
 /*
@@ -148,15 +157,56 @@ static bool cdata_get_bshtm_data(cdata *d, int stock_number, int year , int mont
 	if (d)
 	{
 		int i;
-		//for (i=0; i<100; i++)
+		for (i=0; i<100; i++)
 		{
-			printf("@@@@@@@@@@@@@@@@@@@ i = %d ret = %d\n", i, d->bs_ops->update_data(d));
+			if (d->bs_ops->update_data(d, "2417"))
+			{
+				printf("@@@@@@@@@@@@@@@@@@@ i = %d\n", i);
+				break;
+			}
 		}
 		return true;
 	}
 err:	
 	return false;
 }
+
+static int cdata_http_get(cdata *d, char *host_name, char *request, char *data_buf, int *read_size , int type)
+{
+	int ret = -1;
+	chttp* 	c;
+	c = chttp_new();
+	if (c == NULL)
+		goto err;
+	c->ops->connect(c, host_name);
+	if (type == 1)
+		c->ops->get(c, request, data_buf, PAGE_SIZE, read_size);
+	else
+		c->ops->get2(c, request, data_buf, PAGE_SIZE, read_size);
+	c->ops->close(c);
+	ret = 0;
+err:
+	return ret;
+}
+
+static int cdata_http_post(cdata *d, char *host_name, char *request, char *post_data, 
+	char *data_buf, int *read_size, char *session_id)
+{
+	int ret = -1;
+	chttp* 	c;
+
+	c = chttp_new();
+	if (c == NULL)
+		goto err;
+	strcpy(c->session_id, session_id);
+	c->ops->connect(c, host_name);
+	c->ops->post(c, request, post_data, data_buf, PAGE_SIZE, read_size);		
+	c->ops->close(c);
+	ret = 0;
+err:
+	return ret;
+}
+
 
 static struct tm get_last_update_date()
 {
@@ -304,6 +354,9 @@ cdata *cdata_new(void)
 		ops.update_data 	= update_data,
 		ops.close 			= cdata_close,
 		ops.get_bshtm_data	= cdata_get_bshtm_data,
+		ops.save_to_excel	= cdata_save_to_excel;
+		ops.http_get		= cdata_http_get;
+		ops.http_post		= cdata_http_post;
 		ops.init = true;
 	}
 	d->ops = &ops;
