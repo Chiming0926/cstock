@@ -15,10 +15,8 @@ typedef struct _bshtm_post_data_
 
 static void parse_http_symbol(char *in, char *out)
 {
-	CTRACE;
 	if (in == NULL || out == NULL)
 		return;
-	CTRACE;
 	int i;
 	int len = strlen(in);
 	int count = 0;
@@ -106,26 +104,29 @@ static bool bshtm_update_data(cdata *d, char *st_num)
 {
 	if (d)
 	{
-		char* 	data_buf;
-		int		read_size, data_position; 
+		printf("d->bshtm_data_buf = %08x %d\n", d->bshtm_data_buf, __LINE__);
+		int		read_size, captcha_pos; 
 		char	host[STRING_LEN], bsMenu[STRING_LEN], str[STRING_LEN];
 		bshtm_post_data	bsdata;
-		data_buf = (char*)malloc(PAGE_SIZE);
 		strcpy(host, "bsr.twse.com.tw");
 		strcpy(bsMenu, "/bshtm/bsMenu.aspx");
-		if (data_buf)
+		if (d->bshtm_data_buf)
 		{
 			/* connect to bsMenu and get some useful data */
-			d->ops->http_get(d, host, bsMenu, data_buf, &read_size, 2);
-			receive_useful_data(data_buf, read_size, &bsdata);
-
+			CTRACE;
+			printf("d->bshtm_data_buf = %08x\n", d->bshtm_data_buf);
+			d->ops->http_get(d, host, bsMenu, d->bshtm_data_buf, &read_size, 2);
+			CTRACE;
+			receive_useful_data(d->bshtm_data_buf, read_size, &bsdata);
 			/* get captcha */
 			sprintf(str, "/bshtm/%s", bsdata.url);
-			d->ops->http_get(d, host, str, data_buf, &read_size, 1);
+			printf("url = %s \n", str);
+			d->ops->http_get(d, host, str, d->bshtm_data_buf, &read_size, 1);
+			CTRACE;
 			sprintf(str, CAPTCHA_IMAGE);
-			data_position = get_captcha_start_position(data_buf, read_size);
-			save_file(str, data_buf + data_position, read_size - data_position);
 			
+			captcha_pos = get_captcha_start_position(d->bshtm_data_buf, read_size);
+			d->ops->save_file(str, d->bshtm_data_buf + captcha_pos, read_size - captcha_pos);
 			/* image recognition */
 			cimg*	img;
 			char	captcha[6];
@@ -139,14 +140,18 @@ static bool bshtm_update_data(cdata *d, char *st_num)
 
 				sprintf(post_data, "__EVENTTARGET=&__EVENTARGUMENT=&__LASTFOCUS=&__VIEWSTATE=%s&__EVENTVALIDATION=%s&RadioButton_Normal=RadioButton_Normal&TextBox_Stkno=%s&CaptchaControl1=%s&btnOK=%%E6%%9F%%A5%%E8%%A9%%A2", 
 					    bsdata.__VIEWSTATE, bsdata.__EVENTVALIDATION, st_num, captcha);
-				d->ops->http_post(d, host, bsMenu, post_data, data_buf, &read_size, bsdata.session_id);
-
+				CTRACE;
+				d->ops->http_post(d, host, bsMenu, post_data, d->bshtm_data_buf, &read_size, bsdata.session_id);
+				CTRACE;
 				/* get bshtm data */
 				strcpy(str, "/bshtm/bsContent.aspx");
-				d->ops->http_get(d, host, str, data_buf, &read_size, 2);
+				CTRACE;
+				d->ops->http_get(d, host, str, d->bshtm_data_buf, &read_size, 2);
+				CTRACE;
+				d->ops->save_file("test.asp", d->bshtm_data_buf, read_size);
+				CTRACE;
 				sprintf(str, "%s.csv", st_num);
-				d->ops->save_to_excel(d, data_buf, read_size, str);
-				free(data_buf);	
+				d->ops->save_to_excel(d, d->bshtm_data_buf, read_size, str);	
 				if (read_size < 200)
 					return false;
 				else

@@ -10,7 +10,7 @@ using namespace cv;
 using namespace std;
 
 static Mat recognition_data[RECOGNITION_DATA_NUM];
-static char *recognition_data_string = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+static const char *recognition_data_string = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
 
 static void cimg_init()
 {
@@ -22,7 +22,7 @@ static void cimg_init()
 		recognition_data[i] = imread(name);
 	}	
 }
-
+#if 0
 static void generate_pattern(char *file, bool last)
 {
 #if 0	
@@ -78,13 +78,13 @@ static void generate_pattern(char *file, bool last)
 	Mat src_copy = dilation.clone();
 	findContours( src_copy, contours, hierarchy, RETR_TREE, CHAIN_APPROX_SIMPLE);
 	vector<Rect> rect(contours.size());
-	int i, j;
+	unsigned i, j;
 
 	/*	Get the rect of target character	*/
 	for( i = 0; i < contours.size(); i++ )
         rect[i] = boundingRect(contours[i]);
 
-	int data_num = 18;
+	unsigned data_num = 18;
 	Rect parse_rect[data_num];
 	j=0;
 	for (i=0; i<contours.size(); i++)
@@ -124,7 +124,7 @@ static void generate_pattern(char *file, bool last)
 
     waitKey(0);    
 }
-
+#endif
 
 static double get_mse(Mat img1, Mat img2)
 {
@@ -156,6 +156,7 @@ static char get_recognition_result(Mat img)
 	}
 	return result;
 }
+#define CTRACE printf("@@@@@@@@@@@@@@@ %s %s %d \n", __FUNCTION__, __FILE__, __LINE__);
 
 static bool cimg_get_captcha(char *file_path, char *captcha)
 {	
@@ -170,7 +171,7 @@ static bool cimg_get_captcha(char *file_path, char *captcha)
 			printf("Failed to read the image \n");
         	return false;
     	}
-		
+		CTRACE;
 		/*	do some image processes.  */
 		Mat eroded, blur, edge, dilation; 
 		Mat element(4, 4, CV_8U,Scalar(1));  
@@ -184,9 +185,9 @@ static bool cimg_get_captcha(char *file_path, char *captcha)
 		Mat src_copy = dilation.clone();
 		findContours( src_copy, contours, hierarchy, RETR_TREE, CHAIN_APPROX_SIMPLE);
 		vector<Rect> rect(contours.size());
-
-		int i, j;
-
+		
+		unsigned i, j;
+		CTRACE;
 		/*	Get the rect of target character	*/
 		for( i = 0; i < contours.size(); i++ )
 	    {
@@ -194,6 +195,8 @@ static bool cimg_get_captcha(char *file_path, char *captcha)
 		}
 		Rect parse_rect[5];
 		j=0;
+		CTRACE;
+		printf("contours.size() = %d \n", contours.size());
 		for (i=0; i<contours.size(); i++)
 		{
 			if (rect[i].width > 20 && rect[i].height > 20)
@@ -203,7 +206,7 @@ static bool cimg_get_captcha(char *file_path, char *captcha)
 				parse_rect[j++] = rect[i];
 			}
 		}
-
+		CTRACE;
 		if (j != 5)
 		{
 			return false;
@@ -223,7 +226,7 @@ static bool cimg_get_captcha(char *file_path, char *captcha)
 				}
 			}
 		}
-		
+		CTRACE;
 		Mat tmp, result;
 		i = 0;
 		char name[32];
@@ -235,6 +238,7 @@ static bool cimg_get_captcha(char *file_path, char *captcha)
 			imwrite(name, result);
 			captcha[i] = get_recognition_result(result);
 		}
+		CTRACE;
 		return true;
 	}
 	return false;

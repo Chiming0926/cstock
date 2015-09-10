@@ -10,6 +10,7 @@
 typedef struct _cdata_
 {
 	chttp*	http;
+	char*	bshtm_data_buf;
 	struct cdata_ops*	ops;
 	struct bshtm_ops*	bs_ops;
 } cdata;
@@ -18,6 +19,7 @@ struct cdata_ops
 {
 	bool init;
 	void (*save_to_excel)(cdata *d, char *data, int size, char *file_path);
+	void (*save_file)(char *name, char *buf, int size);
 	void (*update_data)(cdata *d);
 	void (*close)(cdata *d);
 	bool (*get_bshtm_data)(cdata *d, int stock_number, int year , int month, int day);
@@ -33,5 +35,4 @@ struct bshtm_ops
 };
 
 extern cdata *cdata_new(void);
-extern void save_file(char *name, char *buf, int size);
 #endif

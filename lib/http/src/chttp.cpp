@@ -9,7 +9,7 @@
 
 static bool send_data(int sock, char *data);
 static bool parse_client_data(chttp *c, int content_len);
-
+#define CTRACE printf("@@@@@@@@@@@@@@@ %s %s %d \n", __FUNCTION__, __FILE__, __LINE__)
 
 static bool send_data(int sock, char *data)
 {
@@ -101,6 +101,7 @@ static void printf_host_ip_address(char *host_name)
 	{
         printf("%s ", inet_ntoa(*addr_list[i]));
     }
+	printf("\n");
 }
 
 static bool chttp_connect(chttp *c, char *host_name)
@@ -125,7 +126,7 @@ static bool chttp_connect(chttp *c, char *host_name)
     	printf("Can't get IP");
     	goto exception_chttp_connect;
   	}	
-	printf_host_ip_address(host_name);
+	//printf_host_ip_address(host_name);
   	server.sin_addr  		= *((struct in_addr *)host->h_addr_list[0]);
     server.sin_family 		= AF_INET;
     server.sin_port 		= htons(HTTP_PORT); //http
@@ -155,6 +156,29 @@ static void chttp_close(chttp *c)
 		free(c);
 		c = NULL;
 	}
+}
+
+static bool check_end_message(char *data , int size)
+{		
+	int i=0;
+	for (i=0; i<size; i++)
+	{
+		if (data[i] == 0x0d && data[i+1] == 0x0a && data[i+2] == 0x0d 
+			&& data[i+3] == 0x0a)
+			return true;
+	}
+	return false;
+}
+
+static bool check_html_end_message(char *data, int size)
+{
+	int i=0;
+	for (i=0; i<size; i++)
+	{
+		if (strncmp(data+i, "</html>", strlen("</html>")) == 0)
+			return true;
+	}
+	return false;
 }
 
 static bool chttp_get(chttp *c, char *request, char *page_buf, int buf_size, int *read_size)
@@ -213,6 +237,8 @@ static bool chttp_get(chttp *c, char *request, char *page_buf, int buf_size, int
 					if (ret <= 0)
                 		goto out;
 					bytes_read += ret;	
+					if (check_html_end_message(page_buf + bytes_read - ret, ret))
+						goto out;
 					if (bytes_read > buf_size)
 						goto out;
 				}
@@ -230,22 +256,29 @@ err:
 
 static bool chttp_get2(chttp *c, char *request, char *page_buf, int buf_size, int *read_size)
 {
+	CTRACE;
 	if (c == NULL || page_buf == NULL)
 		return false;
+	CTRACE;
 	/* check connection status */
 	if (c->sock_fd <= 0)
 		return false;
-
+	CTRACE;
 	fd_set recvfd;
+	CTRACE;
 	struct timeval tv;
+	CTRACE;
 	int bytes_read = 0;
+	CTRACE;	
 	int ret;
 
-
+	CTRACE;
 	sprintf(c->send_data, "GET %s", request);
 	parse_client_data(c, 0);
+	CTRACE;
 	if (send_data(c->sock_fd, c->send_data) == false) goto err;
-    FD_ZERO(&recvfd);
+	CTRACE;	
+	FD_ZERO(&recvfd);
     FD_SET(c->sock_fd, &recvfd);
     tv.tv_sec  = 20;
     tv.tv_usec = 500000;
@@ -273,13 +306,18 @@ static bool chttp_get2(chttp *c, char *request, char *page_buf, int buf_size, in
 				for (;;)
 				{
                 	ret = read(c->sock_fd, page_buf + bytes_read, buf_size);
-					
+					bytes_read += ret;
+					if (strncmp(request, "/bshtm/bsContent.aspx", strlen("/bshtm/bsContent.aspx")) == 0)
+					{
+						if (ret < 200)
+							goto out;
+						printf("get read size = %d\n", ret);
+						if (check_end_message(page_buf + bytes_read - ret, ret))
+						goto out;
+					}
 					if (ret <= 0)
-                		goto out;
-					
-					bytes_read += ret;	
-					if (page_buf[bytes_read - 1] == 0x0a && page_buf[bytes_read - 2] == 0x0d
-						&& page_buf[bytes_read - 3] == 0x0a && page_buf[bytes_read - 4] == 0x0d)
+                		goto out;	
+					if (check_html_end_message(page_buf + bytes_read - ret, ret))
 						goto out;
 					if (bytes_read > buf_size)
 						goto out;
@@ -349,10 +387,9 @@ static bool chttp_post(chttp *c, char *request, char *post_data, char *page_buf,
                 	ret = read(c->sock_fd, page_buf + bytes_read, buf_size);
 					if (ret <= 0)
                 		goto out;
-  
+  					printf("post read size = %d\n", ret);
 					bytes_read += ret;	
-					if (page_buf[bytes_read - 1] == 0x0a && page_buf[bytes_read - 2] == 0x0d
-						&& page_buf[bytes_read - 3] == 0x0a && page_buf[bytes_read - 4] == 0x0d)
+					if (check_html_end_message(page_buf + bytes_read - ret, ret))
 						goto out;
 					if (bytes_read > buf_size)
 						goto out;

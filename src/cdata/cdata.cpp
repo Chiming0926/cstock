@@ -6,13 +6,13 @@
 #include <time.h>
 #include <unistd.h>
 #include <sys/stat.h>
+#define CTRACE printf("@@@@@@@@@@@@@@@ %s %s %d \n", __FUNCTION__, __FILE__, __LINE__)
 
-//static void save_file(char *name, char *buf, int size);
 static bool cdata_get_investor_sorting_data(cdata *d, int year , int month, int day, int type);
 
-void save_file(char *name, char *buf, int size)
+static void cdata_save_file(char *name, char *buf, int size)
 {
-	printf("name = %s \n", name);
+	//printf("name = %s \n", name);
 	FILE *fp = fopen(name, "wb");
 	if (fp)
 	{
@@ -39,7 +39,6 @@ static int find_data_start_position(char *data, int size)
  */
 static bool cdata_get_three_primary_investor_sorting_data(cdata *d, int year , int month, int day)
 {
-	printf("year = %d, month = %d, day = %d\n", year, month, day);
 	int counter = 0;
 	if (cdata_get_investor_sorting_data(d, year, month, day, 0)) counter++;
 	if (cdata_get_investor_sorting_data(d, year, month, day, 1)) counter++;
@@ -58,6 +57,7 @@ static bool cdata_get_three_primary_investor_sorting_data(cdata *d, int year , i
 			fclose(fp);
 		}
 	}
+	return true;
 }
 
 /*
@@ -83,7 +83,7 @@ static void cdata_save_to_excel(cdata *d, char *data, int size, char *file_path)
 		return;
 	int data_position;
 	data_position = find_data_start_position(data, size);
-	save_file(file_path, data + data_position, size - data_position);
+	d->ops->save_file(file_path, data + data_position, size - data_position);
 }
 
 /*
@@ -137,7 +137,7 @@ static bool cdata_get_investor_sorting_data(cdata *d, int year , int month, int 
 			}
 
 			data_position = find_data_start_position(data_buf, read_size);
-			save_file(file_path, data_buf + data_position, read_size - data_position);
+			d->ops->save_file(file_path, data_buf + data_position, read_size - data_position);
 			free(data_buf);
 			return true;
 		}
@@ -146,17 +146,47 @@ err:
 	return false;
 }
 
-/*
- * The bshtm data needs cookie. 
- * This cookie is generated from BSR.
- * Therefore, we need to crack the captcha of BSR.
- * Image_proc lib would be coming soon.
- */
 static bool cdata_get_bshtm_data(cdata *d, int stock_number, int year , int month, int day)
 {
 	if (d)
 	{
-		int i;
+		int 	i, j, read_size;
+		char* 	data_buf;
+		char	host[STRING_LEN], st_list[STRING_LEN];
+		char 	st_num[5];
+		int 	cnt = 0;
+		data_buf = (char*)malloc(PAGE_SIZE);
+		strcpy(host, "isin.twse.com.tw");
+		strcpy(st_list, "/isin/C_public.jsp?strMode=2");
+		if (data_buf)
+		{
+			/* connect to bsMenu and get some useful data */
+			d->ops->http_get(d, host, st_list, data_buf, &read_size, 2);
+			for (i=0xD0; i<read_size; i++)
+			{
+				if (strncmp(data_buf+i, "<tr><td bgcolor=#FAFAD2>", strlen("<tr><td bgcolor=#FAFAD2>")) == 0)
+				{
+					cnt++;
+					memcpy(st_num, data_buf+i+24, 4);
+					st_num[4] = '\0';
+					printf("st_num = %s \n", st_num);
+					for (j=0; j<100; j++)
+					{
+						if (d->bs_ops->update_data(d, st_num))
+						{
+							break;
+						}
+						usleep(3000);
+					}
+					if (strncmp(st_num, "1435", 4) == 0)
+					{
+						break;
+					}
+				}
+			}
+			free(data_buf);
+		}
+		/*
 		for (i=0; i<100; i++)
 		{
 			if (d->bs_ops->update_data(d, "2417"))
@@ -164,28 +194,35 @@ static bool cdata_get_bshtm_data(cdata *d, int stock_number, int year , int mont
 				printf("@@@@@@@@@@@@@@@@@@@ i = %d\n", i);
 				break;
 			}
-		}
+		}*/
+		
 		return true;
 	}
-err:	
 	return false;
 }
 
 static int cdata_http_get(cdata *d, char *host_name, char *request, char *data_buf, int *read_size , int type)
 {
+	if (data_buf == NULL)
+		return -1;
 	int ret = -1;
+	CTRACE;
 	chttp* 	c;
 	c = chttp_new();
 	if (c == NULL)
-		goto err;
+		return ret;
+	CTRACE;
+	printf("request = %s \n", request);
 	c->ops->connect(c, host_name);
 	if (type == 1)
 		c->ops->get(c, request, data_buf, PAGE_SIZE, read_size);
 	else
+	{
+		CTRACE;
 		c->ops->get2(c, request, data_buf, PAGE_SIZE, read_size);
+	}
 	c->ops->close(c);
 	ret = 0;
-err:
 	return ret;
 }
 
@@ -217,13 +254,19 @@ static struct tm get_last_update_date()
 	fp = fopen(UPDATE_TIME_FILE, "rb");
 	if (fp)
 	{
-		fread(buf, 1, 4, fp);
+		int ret;
+		ret = fread(buf, 1, 4, fp);
 		buf[4] = '\0';
+		if (ret != 4)
+		{
+			date.tm_year = 0;
+			return date;
+		}
 		date.tm_year = atoi(buf);
-		fread(buf, 1, 2, fp);
+		ret = fread(buf, 1, 2, fp);
 		buf[2] = '\0';
 		date.tm_mon = atoi(buf);
-		fread(buf, 1, 2, fp);
+		ret = fread(buf, 1, 2, fp);
 		buf[2] = '\0';
 		date.tm_mday = atoi(buf);
 		fclose(fp);
@@ -336,6 +379,8 @@ static void cdata_close(cdata *d)
 {
 	if (d)
 	{
+		if (d->bshtm_data_buf)
+			free(d->bshtm_data_buf);
 		free(d);
 		d = NULL;
 	}
@@ -355,11 +400,16 @@ cdata *cdata_new(void)
 		ops.close 			= cdata_close,
 		ops.get_bshtm_data	= cdata_get_bshtm_data,
 		ops.save_to_excel	= cdata_save_to_excel;
+		ops.save_file		= cdata_save_file;
 		ops.http_get		= cdata_http_get;
 		ops.http_post		= cdata_http_post;
 		ops.init = true;
 	}
+	
 	d->ops = &ops;
+	d->bshtm_data_buf = (char*)malloc(PAGE_SIZE);
+	if (d->bshtm_data_buf == NULL)
+		goto err;
 	set_bshtm_ops(d);
 	return d;
 err:
