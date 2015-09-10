@@ -12,7 +12,7 @@ AC_PROG_CXX
 AC_PROG_CC
 AC_PROG_LIBTOOL
 # Checks for libraries.
-
+PKG_CHECK_MODULES([opencv], [opencv])
 # Checks for header files.
 
 # Checks for typedefs, structures, and compiler characteristics.
