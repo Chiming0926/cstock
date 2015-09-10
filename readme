@@ -3,4 +3,9 @@ How to build this project?
 2.	./configure
 3.	make
 
+Troubleshooting:
+1. Execute file is not created.
+   1. delete libtool
+   2. ln -s /usr/bin/libtool libtool
+
 
