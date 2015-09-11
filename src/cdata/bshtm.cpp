@@ -100,11 +100,10 @@ static int get_captcha_start_position(char *data, int size)
 	
 }
 
-static bool bshtm_update_data(cdata *d, char *st_num)
+static int bshtm_update_data(cdata *d, char *st_num)
 {
 	if (d)
 	{
-		printf("d->bshtm_data_buf = %08x %d\n", d->bshtm_data_buf, __LINE__);
 		int		read_size, captcha_pos; 
 		char	host[STRING_LEN], bsMenu[STRING_LEN], str[STRING_LEN];
 		bshtm_post_data	bsdata;
@@ -113,20 +112,19 @@ static bool bshtm_update_data(cdata *d, char *st_num)
 		if (d->bshtm_data_buf)
 		{
 			/* connect to bsMenu and get some useful data */
-			CTRACE;
-			printf("d->bshtm_data_buf = %08x\n", d->bshtm_data_buf);
 			d->ops->http_get(d, host, bsMenu, d->bshtm_data_buf, &read_size, 2);
-			CTRACE;
 			receive_useful_data(d->bshtm_data_buf, read_size, &bsdata);
 			/* get captcha */
 			sprintf(str, "/bshtm/%s", bsdata.url);
-			printf("url = %s \n", str);
 			d->ops->http_get(d, host, str, d->bshtm_data_buf, &read_size, 1);
-			CTRACE;
 			sprintf(str, CAPTCHA_IMAGE);
 			
 			captcha_pos = get_captcha_start_position(d->bshtm_data_buf, read_size);
+			printf("read_size = %d, captcha_pos = %d \n", read_size, captcha_pos);
 			d->ops->save_file(str, d->bshtm_data_buf + captcha_pos, read_size - captcha_pos);
+			d->ops->save_file("AGetJpg.txt", d->bshtm_data_buf, read_size);
+			if (read_size < 2000)
+				return CHTTP_FORBIDDEN;
 			/* image recognition */
 			cimg*	img;
 			char	captcha[6];
@@ -140,26 +138,23 @@ static bool bshtm_update_data(cdata *d, char *st_num)
 
 				sprintf(post_data, "__EVENTTARGET=&__EVENTARGUMENT=&__LASTFOCUS=&__VIEWSTATE=%s&__EVENTVALIDATION=%s&RadioButton_Normal=RadioButton_Normal&TextBox_Stkno=%s&CaptchaControl1=%s&btnOK=%%E6%%9F%%A5%%E8%%A9%%A2", 
 					    bsdata.__VIEWSTATE, bsdata.__EVENTVALIDATION, st_num, captcha);
-				CTRACE;
 				d->ops->http_post(d, host, bsMenu, post_data, d->bshtm_data_buf, &read_size, bsdata.session_id);
-				CTRACE;
 				/* get bshtm data */
 				strcpy(str, "/bshtm/bsContent.aspx");
-				CTRACE;
 				d->ops->http_get(d, host, str, d->bshtm_data_buf, &read_size, 2);
-				CTRACE;
-				d->ops->save_file("test.asp", d->bshtm_data_buf, read_size);
-				CTRACE;
 				sprintf(str, "%s.csv", st_num);
-				d->ops->save_to_excel(d, d->bshtm_data_buf, read_size, str);	
+				
 				if (read_size < 200)
-					return false;
+					return CHTTP_FAIL;
 				else
-					return true;
+				{
+					d->ops->save_to_excel(d, d->bshtm_data_buf, read_size, str);	
+					return CHTTP_OK;
+				}
 			}
 		}
 	}
-	return false;
+	return CHTTP_FAIL;
 }
 
 static struct bshtm_ops ops;

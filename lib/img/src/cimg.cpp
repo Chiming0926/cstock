@@ -171,7 +171,6 @@ static bool cimg_get_captcha(char *file_path, char *captcha)
 			printf("Failed to read the image \n");
         	return false;
     	}
-		CTRACE;
 		/*	do some image processes.  */
 		Mat eroded, blur, edge, dilation; 
 		Mat element(4, 4, CV_8U,Scalar(1));  
@@ -187,7 +186,6 @@ static bool cimg_get_captcha(char *file_path, char *captcha)
 		vector<Rect> rect(contours.size());
 		
 		unsigned i, j;
-		CTRACE;
 		/*	Get the rect of target character	*/
 		for( i = 0; i < contours.size(); i++ )
 	    {
@@ -195,8 +193,6 @@ static bool cimg_get_captcha(char *file_path, char *captcha)
 		}
 		Rect parse_rect[5];
 		j=0;
-		CTRACE;
-		printf("contours.size() = %d \n", contours.size());
 		for (i=0; i<contours.size(); i++)
 		{
 			if (rect[i].width > 20 && rect[i].height > 20)
@@ -206,7 +202,6 @@ static bool cimg_get_captcha(char *file_path, char *captcha)
 				parse_rect[j++] = rect[i];
 			}
 		}
-		CTRACE;
 		if (j != 5)
 		{
 			return false;
@@ -226,7 +221,6 @@ static bool cimg_get_captcha(char *file_path, char *captcha)
 				}
 			}
 		}
-		CTRACE;
 		Mat tmp, result;
 		i = 0;
 		char name[32];
@@ -238,7 +232,6 @@ static bool cimg_get_captcha(char *file_path, char *captcha)
 			imwrite(name, result);
 			captcha[i] = get_recognition_result(result);
 		}
-		CTRACE;
 		return true;
 	}
 	return false;

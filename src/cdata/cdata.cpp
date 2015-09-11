@@ -150,7 +150,8 @@ static bool cdata_get_bshtm_data(cdata *d, int stock_number, int year , int mont
 {
 	if (d)
 	{
-		int 	i, j, read_size;
+#if 1
+		int 	i, j, read_size, ret;
 		char* 	data_buf;
 		char	host[STRING_LEN], st_list[STRING_LEN];
 		char 	st_num[5];
@@ -169,14 +170,13 @@ static bool cdata_get_bshtm_data(cdata *d, int stock_number, int year , int mont
 					cnt++;
 					memcpy(st_num, data_buf+i+24, 4);
 					st_num[4] = '\0';
-					printf("st_num = %s \n", st_num);
 					for (j=0; j<100; j++)
 					{
-						if (d->bs_ops->update_data(d, st_num))
-						{
-							break;
-						}
-						usleep(3000);
+						printf("st_num = %s \n", st_num);
+						ret = d->bs_ops->update_data(d, st_num);
+						if (ret == CHTTP_OK) break;
+						else if (ret == CHTTP_FORBIDDEN) sleep(3);
+						usleep(300000);
 					}
 					if (strncmp(st_num, "1435", 4) == 0)
 					{
@@ -186,7 +186,8 @@ static bool cdata_get_bshtm_data(cdata *d, int stock_number, int year , int mont
 			}
 			free(data_buf);
 		}
-		/*
+#else
+		int i;
 		for (i=0; i<100; i++)
 		{
 			if (d->bs_ops->update_data(d, "2417"))
@@ -194,8 +195,8 @@ static bool cdata_get_bshtm_data(cdata *d, int stock_number, int year , int mont
 				printf("@@@@@@@@@@@@@@@@@@@ i = %d\n", i);
 				break;
 			}
-		}*/
-		
+		}
+#endif		
 		return true;
 	}
 	return false;
@@ -206,19 +207,15 @@ static int cdata_http_get(cdata *d, char *host_name, char *request, char *data_b
 	if (data_buf == NULL)
 		return -1;
 	int ret = -1;
-	CTRACE;
 	chttp* 	c;
 	c = chttp_new();
 	if (c == NULL)
 		return ret;
-	CTRACE;
-	printf("request = %s \n", request);
 	c->ops->connect(c, host_name);
 	if (type == 1)
 		c->ops->get(c, request, data_buf, PAGE_SIZE, read_size);
 	else
 	{
-		CTRACE;
 		c->ops->get2(c, request, data_buf, PAGE_SIZE, read_size);
 	}
 	c->ops->close(c);

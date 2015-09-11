@@ -7,6 +7,13 @@
 #define MIN_DATA_SIZE 600
 #define UPDATE_TIME_FILE "data/update.time"
 
+enum
+{
+	CHTTP_OK			= 0,
+	CHTTP_FAIL			= 1,
+	CHTTP_FORBIDDEN	= 2,
+} ;
+
 typedef struct _cdata_
 {
 	chttp*	http;
@@ -31,7 +38,7 @@ struct cdata_ops
 struct bshtm_ops
 {
 	bool init;
-	bool (*update_data)(cdata *d, char *st_num);
+	int  (*update_data)(cdata *d, char *st_num);
 };
 
 extern cdata *cdata_new(void);
