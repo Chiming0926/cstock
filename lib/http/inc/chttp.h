@@ -11,6 +11,7 @@ typedef struct _chttp_
 	int 	sock_fd;
 	char	host_name[HOST_NAME_LEN];
 	char	session_id[STRING_LEN];
+	char	send_data[STRING_LEN*4];
 	struct chttp_ops *ops;
 } chttp;
 

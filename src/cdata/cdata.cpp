@@ -159,26 +159,30 @@ static bool cdata_get_bshtm_data(cdata *d, int stock_number, int year , int mont
 		data_buf = (char*)malloc(PAGE_SIZE);
 		strcpy(host, "isin.twse.com.tw");
 		strcpy(st_list, "/isin/C_public.jsp?strMode=2");
+
+		char st_list2[10][STRING_LEN] = {"1101", "1102", "1103", "1104", "1108", "1109",
+			"1110", "1201", "1203", "1210"};
 		if (data_buf)
 		{
-			/* connect to bsMenu and get some useful data */
-			d->ops->http_get(d, host, st_list, data_buf, &read_size, 2);
-			for (i=0xD0; i<read_size; i++)
+			/* connect to bsMenu and get stock number */
+			//d->ops->http_get(d, host, st_list, data_buf, &read_size, 2);
+			//for (i=0xD0; i<read_size; i++)
+			for (i=0; i<10; i++)
 			{
-				if (strncmp(data_buf+i, "<tr><td bgcolor=#FAFAD2>", strlen("<tr><td bgcolor=#FAFAD2>")) == 0)
+				//if (strncmp(data_buf+i, "<tr><td bgcolor=#FAFAD2>", strlen("<tr><td bgcolor=#FAFAD2>")) == 0)
 				{
 					cnt++;
 					memcpy(st_num, data_buf+i+24, 4);
 					st_num[4] = '\0';
 					for (j=0; j<100; j++)
 					{
-						printf("st_num = %s \n", st_num);
-						ret = d->bs_ops->update_data(d, st_num);
+						//ret = d->bs_ops->update_data(d, st_num);
+						ret = d->bs_ops->update_data(d, st_list2[i]);
+						printf("st_num = %s ret = %d\n", st_list2[i], ret);
 						if (ret == CHTTP_OK) break;
-						else if (ret == CHTTP_FORBIDDEN) sleep(3);
-						usleep(300000);
+//						else if (ret == CHTTP_FORBIDDEN) usleep(500000);
 					}
-					if (strncmp(st_num, "1435", 4) == 0)
+					if (strncmp(st_num, "2456", 4) == 0)
 					{
 						break;
 					}
@@ -187,14 +191,16 @@ static bool cdata_get_bshtm_data(cdata *d, int stock_number, int year , int mont
 			free(data_buf);
 		}
 #else
-		int i;
+		int i, ret;
 		for (i=0; i<100; i++)
 		{
-			if (d->bs_ops->update_data(d, "2417"))
+			ret = d->bs_ops->update_data(d, "2417");
+			if (ret == CHTTP_OK)
 			{
 				printf("@@@@@@@@@@@@@@@@@@@ i = %d\n", i);
 				break;
 			}
+			
 		}
 #endif		
 		return true;
@@ -202,7 +208,8 @@ static bool cdata_get_bshtm_data(cdata *d, int stock_number, int year , int mont
 	return false;
 }
 
-static int cdata_http_get(cdata *d, char *host_name, char *request, char *data_buf, int *read_size , int type)
+static int cdata_http_get(cdata *d, char *host_name, char *request, char *data_buf, 
+	int *read_size , int type, char *session_id)
 {
 	if (data_buf == NULL)
 		return -1;
@@ -211,6 +218,8 @@ static int cdata_http_get(cdata *d, char *host_name, char *request, char *data_b
 	c = chttp_new();
 	if (c == NULL)
 		return ret;
+	if (session_id != NULL)
+		strcpy(c->session_id, session_id);
 	c->ops->connect(c, host_name);
 	if (type == 1)
 		c->ops->get(c, request, data_buf, PAGE_SIZE, read_size);
@@ -232,7 +241,8 @@ static int cdata_http_post(cdata *d, char *host_name, char *request, char *post_
 	c = chttp_new();
 	if (c == NULL)
 		goto err;
-	strcpy(c->session_id, session_id);
+	if (session_id != NULL)
+		strcpy(c->session_id, session_id);
 	c->ops->connect(c, host_name);
 	c->ops->post(c, request, post_data, data_buf, PAGE_SIZE, read_size);		
 	c->ops->close(c);

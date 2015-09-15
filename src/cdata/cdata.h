@@ -18,6 +18,7 @@ typedef struct _cdata_
 {
 	chttp*	http;
 	char*	bshtm_data_buf;
+	char	session_id[STRING_LEN];
 	struct cdata_ops*	ops;
 	struct bshtm_ops*	bs_ops;
 } cdata;
@@ -32,7 +33,8 @@ struct cdata_ops
 	bool (*get_bshtm_data)(cdata *d, int stock_number, int year , int month, int day);
 	int  (*http_post)(cdata *d, char *host_name, char *request, char *post_data, 
 						char *data_buf, int *read_size, char *session_id);
-	int  (*http_get)(cdata *d, char *host_name, char *request, char *data_buf, int *read_size , int type);
+	int  (*http_get)(cdata *d, char *host_name, char *request, 
+					char *data_buf, int *read_size , int type, char *session_id);
 };
 
 struct bshtm_ops
